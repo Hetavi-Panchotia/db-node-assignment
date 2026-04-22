@@ -75,8 +75,41 @@ const getNotes = async (req, res) => {
     }
 };
 
+// 4. Get a single note by ID
+const getNoteById = async (req, res) => {
+    try {
+        if (!isValidId(req.params.id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Note ID",
+                data: null
+            });
+        }
+        const note = await Note.findById(req.params.id);
+        if (!note) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Note not found",
+                data: null
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: "Note fetched successfully",
+            data: note
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            data: null
+        });
+    }
+};
+
 module.exports = {
     createNote,
     createNotesBulk,
-    getNotes
+    getNotes,
+    getNoteById
 };
