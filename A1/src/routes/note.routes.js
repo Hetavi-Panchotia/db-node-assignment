@@ -6,7 +6,8 @@ const {
     getNotes,
     getNoteById,
     replaceNote,
-    updateNote
+    updateNote,
+    deleteNote
 } = require('../controllers/note.controller');
 
 NoteRouter.post('/bulk', createNotesBulk);
@@ -15,5 +16,6 @@ NoteRouter.get('/', getNotes);
 NoteRouter.get('/:id', getNoteById);
 NoteRouter.put('/:id', replaceNote);
 NoteRouter.patch('/:id', updateNote);
+NoteRouter.delete('/:id', deleteNote);
 
 module.exports = NoteRouter;
