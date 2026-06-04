@@ -1,6 +1,7 @@
 // src/app.js
 const express = require('express');
-const morgan = require('morgan'); // optional logging
+const mongoose = require('mongoose');
+const Note = require('../models/note.model');
 const noteRoutes = require('./routes/note.routes');
 
 const app = express();
