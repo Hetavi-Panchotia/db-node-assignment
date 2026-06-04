@@ -1,5 +1,6 @@
 // src/controllers/note.controller.js
 const Note = require('../models/note.model');
+const mongoose = require('mongoose');
 
 // Helper for standard response
 const sendResponse = (res, status, success, message, data = null, extra = {}) => {
@@ -153,12 +154,209 @@ exports.searchByTitle = async (req, res) => {
     return sendResponse(res, 500, false, error.message);
   }
 };
-exports.searchByContent = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.searchAll = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.filterAndSort = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.filterAndPaginate = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.sortAndPaginate = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.searchAndFilter = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.searchSortPaginate = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.filterSortPaginate = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
+exports.searchByContent = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return sendResponse(res, 400, false, "Search query 'q' is required", null);
+    }
+    const notes = await Note.find({ content: { $regex: q, $options: 'i' } });
+    return sendResponse(res, 200, true, `Content search results for: ${q}`, notes, { count: notes.length });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.searchAll = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return sendResponse(res, 400, false, "Search query 'q' is required", null);
+    }
+    const notes = await Note.find({
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { content: { $regex: q, $options: 'i' } },
+      ],
+    });
+    return sendResponse(res, 200, true, `Search results for: ${q}`, notes, { count: notes.length });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.filterAndSort = async (req, res) => {
+  try {
+    const { category, isPinned, sortBy = 'createdAt', order = 'desc' } = req.query;
+    const filter = {};
+    if (category) filter.category = category;
+    if (isPinned !== undefined) filter.isPinned = isPinned === 'true';
+    const allowedSortFields = ['title', 'category', 'createdAt', 'updatedAt', 'isPinned'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order === 'asc' ? 1 : -1;
+    const notes = await Note.find(filter).sort({ [sortField]: sortOrder });
+    return sendResponse(res, 200, true, 'Notes fetched successfully', notes, { count: notes.length });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.filterAndPaginate = async (req, res) => {
+  try {
+    const { category, isPinned, page = 1, limit = 10 } = req.query;
+    const filter = {};
+    if (category) filter.category = category;
+    if (isPinned !== undefined) filter.isPinned = isPinned === 'true';
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    const total = await Note.countDocuments(filter);
+    const notes = await Note.find(filter).skip(skip).limit(limitNum);
+    return sendResponse(res, 200, true, 'Notes fetched successfully', notes, {
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        hasNextPage: pageNum < Math.ceil(total / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.sortAndPaginate = async (req, res) => {
+  try {
+    const { sortBy = 'createdAt', order = 'desc', page = 1, limit = 10 } = req.query;
+    const allowedSortFields = ['title', 'category', 'createdAt', 'updatedAt', 'isPinned'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order === 'asc' ? 1 : -1;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    const total = await Note.countDocuments({});
+    const notes = await Note.find({})
+      .sort({ [sortField]: sortOrder })
+      .skip(skip)
+      .limit(limitNum);
+    return sendResponse(res, 200, true, 'Notes fetched successfully', notes, {
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        hasNextPage: pageNum < Math.ceil(total / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.searchAndFilter = async (req, res) => {
+  try {
+    const { q, category, isPinned } = req.query;
+    if (!q) {
+      return sendResponse(res, 400, false, "Search query 'q' is required", null);
+    }
+    const filter = {
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { content: { $regex: q, $options: 'i' } },
+      ],
+    };
+    if (category) filter.category = category;
+    if (isPinned !== undefined) filter.isPinned = isPinned === 'true';
+    const notes = await Note.find(filter);
+    return sendResponse(res, 200, true, `Search results for: ${q}`, notes, { count: notes.length });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.searchSortPaginate = async (req, res) => {
+  try {
+    const { q, sortBy = 'createdAt', order = 'desc', page = 1, limit = 10 } = req.query;
+    if (!q) {
+      return sendResponse(res, 400, false, "Search query 'q' is required", null);
+    }
+    const filter = {
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { content: { $regex: q, $options: 'i' } },
+      ],
+    };
+    const allowedSortFields = ['title', 'category', 'createdAt', 'updatedAt', 'isPinned'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order === 'asc' ? 1 : -1;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    const total = await Note.countDocuments(filter);
+    const notes = await Note.find(filter)
+      .sort({ [sortField]: sortOrder })
+      .skip(skip)
+      .limit(limitNum);
+    return sendResponse(res, 200, true, `Search results for: ${q}`, notes, {
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        hasNextPage: pageNum < Math.ceil(total / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.filterSortPaginate = async (req, res) => {
+  try {
+    const {
+      category,
+      isPinned,
+      sortBy = 'createdAt',
+      order = 'desc',
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const filter = {};
+    if (category) filter.category = category;
+    if (isPinned !== undefined) filter.isPinned = isPinned === 'true';
+
+    const allowedSortFields = ['title', 'category', 'createdAt', 'updatedAt', 'isPinned'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order === 'asc' ? 1 : -1;
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await Note.countDocuments(filter);
+    const notes = await Note.find(filter)
+      .sort({ [sortField]: sortOrder })
+      .skip(skip)
+      .limit(limitNum);
+
+    return sendResponse(res, 200, true, 'Notes fetched successfully', notes, {
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        hasNextPage: pageNum < Math.ceil(total / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
 exports.masterQuery = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
