@@ -189,11 +189,71 @@ const updateNote = async (req, res) => {
     }
 };
 
+// 7. Delete a single note
+const deleteNote = async (req, res) => {
+    try {
+        if (!isValidId(req.params.id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Note ID",
+                data: null
+            });
+        }
+        const note = await Note.findByIdAndDelete(req.params.id);
+        if (!note) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Note not found",
+                data: null
+            });
+        }
+        res.status(200).json({ 
+            success: true,
+            message: "Note deleted successfully",
+            data: null
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+// 8. Delete multiple notes (Bulk)
+const deleteNotesBulk = async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "IDs array is required and cannot be empty",
+                data: null
+            });
+        }
+        const result = await Note.deleteMany({ _id: { $in: ids } });
+        res.status(200).json({
+            success: true,
+            message: `${result.deletedCount} notes deleted successfully`,
+            data: null
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            data: null
+        });
+    }
+};
+
 module.exports = {
     createNote,
     createNotesBulk,
     getNotes,
     getNoteById,
     replaceNote,
-    updateNote
+    updateNote,
+    deleteNote,
+    deleteNotesBulk
 };
