@@ -110,10 +110,49 @@ exports.updateNote = async (req, res) => {
     return sendResponse(res, 500, false, error.message);
   }
 };
-exports.deleteNote = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
-exports.deleteBulkNotes = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
+exports.deleteNote = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendResponse(res, 400, false, 'Invalid note ID', null);
+    }
+    const deleted = await Note.findByIdAndDelete(id);
+    if (!deleted) {
+      return sendResponse(res, 404, false, 'Note not found', null);
+    }
+    return sendResponse(res, 200, true, 'Note deleted successfully', null);
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+exports.deleteBulkNotes = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return sendResponse(res, 400, false, 'ids array is required and cannot be empty', null);
+    }
+    const result = await Note.deleteMany({ _id: { $in: ids } });
+    return sendResponse(res, 200, true, `${result.deletedCount} notes deleted successfully`, null);
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
 // Search and combined handlers placeholders
-exports.searchByTitle = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
+exports.searchByTitle = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return sendResponse(res, 400, false, "Search query 'q' is required", null);
+    }
+    const notes = await Note.find({ title: { $regex: q, $options: 'i' } });
+    return sendResponse(res, 200, true, `Search results for: ${q}`, notes, { count: notes.length });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
 exports.searchByContent = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
 exports.searchAll = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
 exports.filterAndSort = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
