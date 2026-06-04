@@ -1,0 +1,9 @@
+- `[ ]` Implement filter & sort endpoint (`GET /api/notes/filter-sort`)
+- `[ ]` Implement filter & paginate endpoint (`GET /api/notes/filter-paginate`)
+- `[ ]` Implement sort & paginate endpoint (`GET /api/notes/sort-paginate`)
+- `[ ]` Implement search & filter endpoint (`GET /api/notes/search-filter`)
+- `[ ]` Implement search, sort & paginate endpoint (`GET /api/notes/search-sort-paginate`)
+- `[ ]` Implement filter, sort & paginate endpoint (`GET /api/notes/filter-sort-paginate`)
+- `[ ]` Implement master query endpoint (`GET /api/notes/query`)
+- `[ ]` Add corresponding route definitions in `src/routes/note.routes.js`
+- `[ ]` Commit after every three endpoints as per assignment rules

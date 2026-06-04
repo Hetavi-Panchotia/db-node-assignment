@@ -359,4 +359,59 @@ exports.filterSortPaginate = async (req, res) => {
     return sendResponse(res, 500, false, error.message);
   }
 };
-exports.masterQuery = async (req, res) => { res.status(501).json({ success: false, message: 'Not implemented' }); };
+exports.masterQuery = async (req, res) => {
+  try {
+    const {
+      q,
+      category,
+      isPinned,
+      sortBy = 'createdAt',
+      order = 'desc',
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    // Build filter criteria
+    const filter = {};
+    // Search criteria (title or content regex) if q provided
+    if (q) {
+      filter.$or = [
+        { title: { $regex: q, $options: 'i' } },
+        { content: { $regex: q, $options: 'i' } },
+      ];
+    }
+    // Additional filters
+    if (category) filter.category = category;
+    if (isPinned !== undefined) filter.isPinned = isPinned === 'true';
+
+    // Sorting logic
+    const allowedSortFields = ['title', 'category', 'createdAt', 'updatedAt', 'isPinned'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order === 'asc' ? 1 : -1;
+
+    // Pagination calculations
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await Note.countDocuments(filter);
+    const notes = await Note.find(filter)
+      .sort({ [sortField]: sortOrder })
+      .skip(skip)
+      .limit(limitNum);
+
+    return sendResponse(res, 200, true, 'Notes fetched successfully', notes, {
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        hasNextPage: pageNum < Math.ceil(total / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
