@@ -75,8 +75,125 @@ const getNotes = async (req, res) => {
     }
 };
 
+// 4. Get a single note by ID
+const getNoteById = async (req, res) => {
+    try {
+        if (!isValidId(req.params.id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Note ID",
+                data: null
+            });
+        }
+        const note = await Note.findById(req.params.id);
+        if (!note) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Note not found",
+                data: null
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: "Note fetched successfully",
+            data: note
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+// 5. Replace a note completely (PUT)
+const replaceNote = async (req, res) => {
+    try {
+        if (!isValidId(req.params.id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Note ID",
+                data: null
+            });
+        }
+        const { title, content, category, isPinned } = req.body;
+        // PUT requires all fields. If not provided, they should reset to defaults.
+        // overwrite: true replaces the entire document.
+        const note = await Note.findByIdAndUpdate(
+            req.params.id,
+            { title, content, category, isPinned },
+            { new: true, overwrite: true, runValidators: true }
+        );
+        if (!note) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Note not found",
+                data: null
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: "Note replaced successfully",
+            data: note
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+// 6. Update specific fields (PATCH)
+const updateNote = async (req, res) => {
+    try {
+        if (!isValidId(req.params.id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Note ID",
+                data: null
+            });
+        }
+        if (Object.keys(req.body).length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "No fields provided to update",
+                data: null
+            });
+        }
+        const note = await Note.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!note) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Note not found",
+                data: null
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: "Note updated successfully",
+            data: note
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            data: null
+        });
+    }
+};
+
 module.exports = {
     createNote,
     createNotesBulk,
-    getNotes
+    getNotes,
+    getNoteById,
+    replaceNote,
+    updateNote
 };
